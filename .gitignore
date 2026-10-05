@@ -21,3 +21,7 @@ tail.txt
 *.swp
 .idea/
 .vscode/
+
+# python artifacts / python 产物
+__pycache__/
+*.pyc
