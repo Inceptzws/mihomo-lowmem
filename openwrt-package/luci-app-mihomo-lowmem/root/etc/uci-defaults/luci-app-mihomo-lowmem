@@ -1,0 +1,10 @@
+#!/bin/sh
+# first-install defaults / 首次安装默认值
+uci -q batch <<-EOT
+	set mihomo-lowmem.general=service
+	set mihomo-lowmem.general.enabled='1'
+	set mihomo-lowmem.general.api_port='9990'
+	set mihomo-lowmem.general.mixed_port='7890'
+	commit mihomo-lowmem
+EOT
+exit 0

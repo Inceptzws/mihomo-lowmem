@@ -1,0 +1,141 @@
+#
+# mihomo-lowmem :: build matrix + release
+# 多架构自动编译 + 打 tag 自动发布
+#
+name: build
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+env:
+  MIHOMO_VERSION: v1.18.0
+
+jobs:
+  # ---------------------------------------------------------------- 编译矩阵
+  build:
+    name: ${{ matrix.name }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # MT7621A / MT7620 — the target of this project
+          - { goarch: mipsle,   gomips: softfloat, goarm: '', name: mipsle-softfloat }
+          - { goarch: mipsle,   gomips: hardfloat, goarm: '', name: mipsle-hardfloat }
+          - { goarch: mips64le, gomips: softfloat, goarm: '', name: mips64le-softfloat }
+          # common modern targets
+          - { goarch: arm64,    gomips: '',          goarm: '', name: arm64 }
+          - { goarch: arm,      gomips: '',          goarm: '7', name: armv7 }
+          - { goarch: amd64,    gomips: '',          goarm: '', name: amd64 }
+    steps:
+      - name: Checkout / 拉取本仓库
+        uses: actions/checkout@v4
+
+      - name: Set up Go / 安装 Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+
+      - name: Checkout mihomo / 拉取 mihomo 源码
+        run: |
+          git clone --depth 1 --branch "$MIHOMO_VERSION" \
+            https://github.com/MetaCubeX/mihomo.git mihomo-src
+
+      - name: Build / 编译
+        working-directory: mihomo-src
+        env:
+          GOOS: linux
+          GOARCH: ${{ matrix.goarch }}
+          GOMIPS: ${{ matrix.gomips }}
+          GOARM: ${{ matrix.goarm }}
+          CGO_ENABLED: '0'
+        run: |
+          go build -trimpath \
+            -tags "with_low_memory" \
+            -ldflags "-s -w -X github.com/metacubex/mihomo/constant.Version=${MIHOMO_VERSION}" \
+            -o "../mihomo-${MIHOMO_VERSION}-linux-${{ matrix.name }}" .
+
+      - name: Compress with a 2 MiB LZMA2 dictionary ★ / 用 2MiB 字典压缩 ★
+        run: |
+          # ★ CRITICAL: xz default (-9) uses a 64 MiB dictionary.
+          #   Decompressing that needs ~64 MB RAM, which freezes a 128 MB router.
+          #   A 2 MiB dictionary needs only 2-4 MB to decompress.
+          # ★ 关键：xz 默认 -9 的 64MiB 字典解压需约 64MB 内存，会把 128MB 路由器卡死。
+          #   2MiB 字典解压只需 2-4MB。
+          BIN="mihomo-${MIHOMO_VERSION}-linux-${{ matrix.name }}"
+          xz -6 --lzma2=dict=2MiB -c "$BIN" > "${BIN}.xz"
+          # verify round-trip / 校验往返一致
+          xz -d -c "${BIN}.xz" | cmp - "$BIN" && echo "round-trip OK"
+          ls -la "$BIN" "${BIN}.xz"
+
+      - name: Checksums / 校验和
+        run: |
+          sha256sum mihomo-*.xz > "SHA256SUMS-${{ matrix.name }}.txt"
+          cat "SHA256SUMS-${{ matrix.name }}.txt"
+
+      - name: Upload artifact / 上传产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: mihomo-${{ matrix.name }}
+          path: |
+            mihomo-*.xz
+            SHA256SUMS-*.txt
+          if-no-files-found: error
+
+  # ---------------------------------------------------------------- 打 tag 发布
+  release:
+    name: release
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download all artifacts / 下载全部产物
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Assemble release notes / 生成发布说明
+        run: |
+          {
+            echo "## mihomo-lowmem ${GITHUB_REF_NAME}"
+            echo ""
+            echo "Prebuilt, stripped cores with the \`with_low_memory\` tag,"
+            echo "compressed using a **2 MiB LZMA2 dictionary** so decompression"
+            echo "needs only 2-4 MB of RAM instead of 64 MB."
+            echo ""
+            echo "预编译精简内核（\`with_low_memory\` 标签），"
+            echo "使用 **2MiB LZMA2 字典** 压缩，解压仅需 2-4MB 内存而非 64MB。"
+            echo ""
+            echo "### Install / 安装"
+            echo '```sh'
+            echo 'xz -t mihomo-*.xz'
+            echo 'xz -d -c mihomo-<arch>.xz > /overlay/mihomo/CrashCore.xz.new'
+            echo 'mv /overlay/mihomo/CrashCore.xz.new /overlay/mihomo/CrashCore.xz'
+            echo '/etc/init.d/mihomo restart'
+            echo '```'
+            echo ""
+            echo "### Checksums / 校验和"
+            echo '```'
+            cat dist/SHA256SUMS-*.txt
+            echo '```'
+          } > RELEASE_NOTES.md
+          cat RELEASE_NOTES.md
+
+      - name: Create release / 创建发布
+        uses: softprops/action-gh-release@v2
+        with:
+          body_path: RELEASE_NOTES.md
+          files: |
+            dist/mihomo-*.xz
+            dist/SHA256SUMS-*.txt
+          draft: false
+          generate_release_notes: true

@@ -1,0 +1,20 @@
+{
+	"luci-app-mihomo-lowmem": {
+		"description": "Grant access to mihomo-lowmem service control and status",
+		"read": {
+			"file": {
+				"/tmp/mihomo-status": [ "read" ],
+				"/tmp/clash.log": [ "read" ],
+				"/overlay/mihomo/config.yaml": [ "read" ]
+			},
+			"ubus": { "service": [ "list" ] }
+		},
+		"write": {
+			"file": {
+				"/etc/init.d/mihomo": [ "exec" ],
+				"/overlay/mihomo/restart.sh": [ "exec" ],
+				"/overlay/mihomo/start.sh": [ "exec" ]
+			}
+		}
+	}
+}

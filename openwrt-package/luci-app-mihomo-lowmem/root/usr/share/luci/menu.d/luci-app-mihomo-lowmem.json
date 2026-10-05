@@ -1,0 +1,14 @@
+{
+	"admin/services/mihomo-lowmem": {
+		"title": "Mihomo (LowMem)",
+		"order": 30,
+		"action": {
+			"type": "view",
+			"path": "mihomo-lowmem/overview"
+		},
+		"depends": {
+			"acl": [ "luci-app-mihomo-lowmem" ],
+			"uci": { "mihomo-lowmem": true }
+		}
+	}
+}

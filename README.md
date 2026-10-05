@@ -41,6 +41,8 @@ Total required .................................... 49 MB   > 47 MB  ✗
 → you can still ping it, but SSH and the web UI time out
 ```
 
+![Memory budget: naive vs optimized](docs/images/memory-budget.svg)
+
 The same arithmetic after this project's optimizations:
 
 ```
@@ -53,6 +55,10 @@ Total required .................................... 40 MB   < 47 MB  ✓
 → 7 MB headroom → measured 24-26 MB free at runtime
 ```
 
+### Architecture at a glance / 架构一览
+
+![System architecture](docs/images/architecture.svg)
+
 ### Highlights
 
 | # | Highlight | Why it matters |
@@ -63,8 +69,12 @@ Total required .................................... 40 MB   < 47 MB  ✓
 | 4 | **Self-compiled slim core** | `with_low_memory` build tag, no gvisor, stripped symbols: 30+ MB → 28.25 MB. |
 | 5 | **TLD-driven rule economy** | One `DOMAIN-SUFFIX,cn,DIRECT` rule replaces tens of thousands of hand-written domain rules: 8450 → 1179 rules (−86 %). |
 | 6 | **Device-side subscription update** | The router **never downloads the subscription**. The device you tap the button on does the download; the router only receives and applies. |
+
+![Device-side subscription update](docs/images/subscription-flow.svg)
+
 | 7 | **Streaming config processing** | `awk` extracts only what is needed, so peak memory is O(1) regardless of subscription size (517 KB → 25 KB measured). |
 | 8 | **procd supervision** | Standard OpenWrt service manager: crash → auto-respawn, boot → auto-start, no session dependency. |
+| 9 | **LuCI integration** | A native LuCI app (`admin/services/mihomo-lowmem`) with node switching, device-side subscription update and log viewer — no extra daemon, no extra RAM. |
 
 ### Documentation
 
@@ -196,6 +206,8 @@ mihomo 运行时堆（默认参数） ........................ ~21 MB
 → ping 还通，但 SSH 和网页管理全部超时
 ```
 
+![内存预算：常规方案 vs 优化后](docs/images/memory-budget.svg)
+
 本项目优化之后的同一笔账：
 
 ```
@@ -207,6 +219,10 @@ mihomo 内核解压到内存 .............................. 28.25 MB
 
 → 余量 7MB → 实测运行时空闲 24-26MB
 ```
+
+### 架构一览
+
+![系统架构](docs/images/architecture.svg)
 
 ### 亮点
 
@@ -220,6 +236,7 @@ mihomo 内核解压到内存 .............................. 28.25 MB
 | 6 | **设备端更新订阅** | 路由器**从不下载订阅**。你点击按钮的那台设备负责下载，路由器只做接收和应用。 |
 | 7 | **流式配置处理** | 用 `awk` 只提取需要的部分，内存占用恒定为 O(1)，与订阅大小无关（实测 517KB → 25KB）。 |
 | 8 | **procd 标准守护** | OpenWrt 官方服务管理：崩溃自动拉起、开机自启、不依赖登录会话。 |
+| 9 | **LuCI 原生集成** | 原生 LuCI 应用（`admin/services/mihomo-lowmem`）：线路切换、设备端更新订阅、日志查看 —— 无额外守护进程、不占额外内存。 |
 
 ### 文档索引
 

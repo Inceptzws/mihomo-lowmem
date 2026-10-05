@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 400" width="880" height="400">
+  <style>
+    .t  { font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif; }
+    .h  { font-size:18px; font-weight:700; fill:#111827; }
+    .lane{ font-size:13px; font-weight:700; fill:#374151; }
+    .msg{ font-size:12px; fill:#374151; }
+    .note{ font-size:11px; fill:#6b7280; }
+  </style>
+  <rect width="880" height="400" rx="14" fill="#ffffff"/>
+  <rect x="0.5" y="0.5" width="879" height="399" rx="14" fill="none" stroke="#e5e7eb"/>
+  <text class="t h" x="30" y="38">订阅更新：由设备拉取 / Subscription update: fetched by the device</text>
+
+  <!-- 泳道 -->
+  <rect x="40" y="60" width="180" height="40" rx="8" fill="#eff6ff" stroke="#93c5fd"/>
+  <text class="t lane" x="62" y="85">Your device / 你的设备</text>
+  <rect x="350" y="60" width="180" height="40" rx="8" fill="#eef2ff" stroke="#818cf8"/>
+  <text class="t lane" x="378" y="85">Router / 路由器</text>
+  <rect x="660" y="60" width="180" height="40" rx="8" fill="#f0fdf4" stroke="#86efac"/>
+  <text class="t lane" x="686" y="85">Subscription source</text>
+
+  <line x1="130" y1="100" x2="130" y2="360" stroke="#d1d5db" stroke-dasharray="4 4"/>
+  <line x1="440" y1="100" x2="440" y2="360" stroke="#d1d5db" stroke-dasharray="4 4"/>
+  <line x1="750" y1="100" x2="750" y2="360" stroke="#d1d5db" stroke-dasharray="4 4"/>
+
+  <defs><marker id="m" markerWidth="9" markerHeight="9" refX="7" refY="3.2" orient="auto">
+    <path d="M0,0 L7,3.2 L0,6.4 z" fill="#6366f1"/></marker></defs>
+
+  <!-- 步骤 -->
+  <line x1="130" y1="140" x2="744" y2="140" stroke="#6366f1" stroke-width="1.8" marker-end="url(#m)"/>
+  <text class="t msg" x="150" y="133">① tap the button — the DEVICE fetches the subscription over its own network</text>
+  <text class="t note" x="150" y="158">① 点按钮 —— 由【设备自己】的网络去拉取订阅（已在路由器后面，线路正确）</text>
+
+  <line x1="744" y1="200" x2="136" y2="200" stroke="#94a3b8" stroke-width="1.6" marker-end="url(#m)"/>
+  <text class="t msg" x="300" y="193">② subscription body returned (e.g. 517 KB)</text>
+  <text class="t note" x="300" y="218">② 返回订阅内容（例如 517KB 的完整配置）</text>
+
+  <line x1="130" y1="258" x2="434" y2="258" stroke="#6366f1" stroke-width="1.8" marker-end="url(#m)"/>
+  <text class="t msg" x="150" y="251">③ POST /cgi-bin/save-sub</text>
+  <text class="t note" x="150" y="276">③ POST 给路由器接口（CORS 已开启）</text>
+
+  <rect x="448" y="290" width="196" height="60" rx="8" fill="#eef2ff" stroke="#818cf8"/>
+  <text class="t msg" x="460" y="310" font-weight="700" fill="#4338ca">④ stream-extract (awk)</text>
+  <text class="t note" x="460" y="328">④ 流式提取 proxies 段</text>
+  <text class="t note" x="460" y="343">O(1) memory · 517KB → 25KB</text>
+  <line x1="440" y1="290" x2="440" y2="262" stroke="#818cf8" stroke-width="1.4"/>
+
+  <text class="t msg" x="448" y="378" font-weight="700" fill="#059669">⑤ rebuild config → restart core (~10 s) — zero outbound traffic from the router</text>
+  <text class="t note" x="448" y="393">⑤ 重建配置 → 重启内核（约 10 秒）—— 路由器全程不发起任何对外连接</text>
+</svg>

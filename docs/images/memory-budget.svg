@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 430" width="860" height="430">
+  <style>
+    .t  { font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif; }
+    .h  { font-size:19px; font-weight:700; fill:#111827; }
+    .s  { font-size:13px; fill:#6b7280; }
+    .lbl{ font-size:14px; font-weight:600; fill:#374151; }
+    .val{ font-size:13px; font-weight:600; fill:#ffffff; }
+    .num{ font-size:15px; font-weight:700; }
+  </style>
+  <rect width="860" height="430" rx="14" fill="#ffffff"/>
+  <rect x="0.5" y="0.5" width="859" height="429" rx="14" fill="none" stroke="#e5e7eb"/>
+
+  <text class="t h" x="34" y="44">为什么必须做内存优化 / Why memory optimization is mandatory</text>
+  <text class="t s" x="34" y="67">MT7621A + 128 MB RAM class device — only ~47 MB is actually usable</text>
+
+  <!-- 可用内存基准线 -->
+  <g>
+    <text class="t lbl" x="34" y="112">Usable RAM / 可用内存</text>
+    <rect x="230" y="97" width="470" height="30" rx="6" fill="#eef2ff" stroke="#c7d2fe"/>
+    <text class="t" x="700" y="117" font-size="14" font-weight="700" fill="#4f46e5">47 MB</text>
+  </g>
+
+  <!-- 朴素方案 -->
+  <g>
+    <text class="t lbl" x="34" y="182">Naive / 常规方案</text>
+    <rect x="230" y="167" width="281" height="30" rx="6" fill="#6366f1"/>
+    <text class="t val" x="243" y="187">core 28.25</text>
+    <rect x="515" y="167" width="210" height="30" rx="6" fill="#f43f5e"/>
+    <text class="t val" x="528" y="187">heap ~21</text>
+    <!-- 超出部分 -->
+    <rect x="705" y="167" width="20" height="30" rx="4" fill="#f43f5e" opacity="0.35"/>
+    <text class="t num" x="742" y="188" fill="#dc2626">49 MB ✗</text>
+    <text class="t s" x="230" y="218" fill="#dc2626">超出可用内存 2 MB → 内核疯狂回收内存 → 系统假死（ping 通但 SSH/网页全超时）</text>
+  </g>
+
+  <!-- 优化方案 -->
+  <g>
+    <text class="t lbl" x="34" y="285">Optimized / 优化后</text>
+    <rect x="230" y="270" width="281" height="30" rx="6" fill="#6366f1"/>
+    <text class="t val" x="243" y="290">core 28.25</text>
+    <rect x="515" y="270" width="120" height="30" rx="6" fill="#10b981"/>
+    <text class="t val" x="528" y="290">heap 12</text>
+    <text class="t num" x="656" y="291" fill="#059669">40 MB ✓</text>
+    <text class="t s" x="230" y="321" fill="#059669">余量 7 MB → 实测空闲 24-26 MB → 稳定运行</text>
+  </g>
+
+  <!-- 图例 -->
+  <g transform="translate(230,356)">
+    <rect x="0" y="0" width="14" height="14" rx="3" fill="#6366f1"/>
+    <text class="t s" x="21" y="12">core decompressed in tmpfs / 内核解压到内存盘</text>
+    <rect x="330" y="0" width="14" height="14" rx="3" fill="#f43f5e"/>
+    <text class="t s" x="351" y="12">default heap / 默认堆</text>
+    <rect x="510" y="0" width="14" height="14" rx="3" fill="#10b981"/>
+    <text class="t s" x="531" y="12">GOGC=50 + GOMEMLIMIT=20MiB</text>
+  </g>
+
+  <text class="t s" x="34" y="404">Measured on Xiaomi Router 4A Gigabit (R4A / DVB4218CN) · OpenWrt 23.05.5 · mihomo v1.18.0-lowmem</text>
+</svg>

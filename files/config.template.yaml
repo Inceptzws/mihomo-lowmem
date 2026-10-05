@@ -22,6 +22,17 @@ external-controller: '0.0.0.0:9990'
 external-ui: ui
 secret: ''                # set a password if exposed / 若对外暴露请设置密码
 
+# ---- CORS: let the LuCI app and the dashboard call this API ----
+# ---- CORS：允许 LuCI 界面和管理面板调用本 API ----
+#  Set this to your router's LAN address. mihomo does not accept "*".
+#  改成你路由器的局域网地址。mihomo 不接受 "*"。
+external-controller-cors:
+  allow-origins:
+    - 'http://192.168.1.1'
+    - 'http://192.168.31.1'
+    - 'http://openwrt.lan'
+  allow-private-network: true
+
 # ---- DNS (transparently redirected from port 53) / DNS（由 53 端口透明重定向）----
 dns:
   enable: true
