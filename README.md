@@ -86,6 +86,9 @@ Total required .................................... 40 MB   < 47 MB  ✓
 | [Troubleshooting](docs/04-troubleshooting.md) | [故障排查](docs/04-troubleshooting.md) |
 | [FAQ](docs/05-faq.md) | [常见问题](docs/05-faq.md) |
 | [Contributing / upstream](docs/06-contributing.md) | [参与贡献 / 提交上游](docs/06-contributing.md) |
+| [Publishing guide](docs/07-publishing.md) | [发布指南](docs/07-publishing.md) |
+| [Launch post (ready to publish)](docs/08-launch-post.md) | [发布短文（可直接发布）](docs/08-launch-post.md) |
+| [Visual guide / screenshots](docs/images/README.md) | [图示说明 / 截图规范](docs/images/README.md) |
 
 ### Tested hardware / 实测硬件
 
