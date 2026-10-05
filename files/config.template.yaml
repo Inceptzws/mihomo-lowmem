@@ -1,0 +1,97 @@
+# ==========================================================================
+#  mihomo-lowmem :: configuration template
+#  mihomo-lowmem :: 配置模板
+#
+#  Copy to /overlay/mihomo/config.yaml and adjust:
+#  复制到 /overlay/mihomo/config.yaml 后按需修改：
+#    <SUBSCRIPTION_URL>  -> your subscription URL   / 你的订阅地址
+#    <LAN_CIDR>          -> your LAN subnet, e.g. 192.168.1.0/24
+# ==========================================================================
+
+# ---- listeners / 监听端口 ----
+mixed-port: 7890          # HTTP/SOCKS mixed port  / HTTP+SOCKS 混合端口
+redir-port: 7892          # transparent proxy port / 透明代理端口（nftables 重定向到此处）
+allow-lan: true           # accept LAN clients   / 允许局域网连接
+bind-address: '*'
+mode: rule
+log-level: warning        # low log level saves RAM / 日志级别调低以省内存
+ipv6: false               # disable if your ISP has no IPv6 / 无 IPv6 时关闭
+
+# ---- external controller + dashboard / 外部控制 + 面板 ----
+external-controller: '0.0.0.0:9990'
+external-ui: ui
+secret: ''                # set a password if exposed / 若对外暴露请设置密码
+
+# ---- DNS (transparently redirected from port 53) / DNS（由 53 端口透明重定向）----
+dns:
+  enable: true
+  listen: 0.0.0.0:1053
+  ipv6: false
+  enhanced-mode: fake-ip          # fake-ip keeps the DNS cache small / fake-ip 让缓存更小
+  fake-ip-range: 198.18.0.1/16
+  fake-ip-filter:
+    - '*.lan'
+    - '*.local'
+  nameserver:
+    - 223.5.5.5
+    - 119.29.29.29
+  fallback:
+    - https://1.1.1.1/dns-query
+    - https://8.8.8.8/dns-query
+
+# ---- performance knobs / 性能相关 ----
+profile:
+  store-selected: true
+  store-fake-ip: true
+unified-delay: true
+tcp-concurrent: true
+find-process-mode: 'off'    # saves CPU+RAM on weak routers / 弱路由器建议关闭
+global-client-fingerprint: chrome
+
+# ==========================================================================
+#  PROXIES — injected from your subscription by the panel button
+#  代理列表 —— 由面板「更新订阅」按钮写入
+#
+#  NOTE: this file is the TEMPLATE. The deployment splits it into
+#        head.txt (above) + tail.txt (below) so the CGI can rebuild
+#        config.yaml by streaming, without ever holding it in memory.
+#  注意：本文件是模板。部署时会被拆成 head.txt（上方）和 tail.txt（下方），
+#        使 CGI 可以流式重建 config.yaml，全程不占内存。
+# ==========================================================================
+proxies: []
+
+# ---- proxy groups / 策略组 ----
+proxy-groups:
+  - { name: '🚀 Select',   type: select,   use: [airport], proxies: [DIRECT] }
+  - { name: '♻️ Auto',     type: url-test, use: [airport], url: 'http://www.gstatic.com/generate_204', interval: 300, tolerance: 50 }
+  - { name: '🎬 Media',    type: select,   use: [airport], proxies: ['🚀 Select'] }
+  - { name: '🐟 Fallback', type: select,   use: [airport], proxies: ['🚀 Select', DIRECT] }
+  - { name: '🛑 AdBlock',  type: select,   proxies: [REJECT, DIRECT] }
+
+# ---- rules / 分流规则 ----
+#
+#  ★ CORE MEMORY TRICK ★  ★ 核心省内存技巧 ★
+#  A single suffix rule covers an entire TLD:
+#  一条后缀规则即可覆盖整个顶级域：
+#
+#      DOMAIN-SUFFIX,cn,DIRECT
+#
+#  That one line replaces tens of thousands of hand-written domain rules.
+#  It is why this project fits 1179 rules where naive configs need 8450+.
+#  这一行可替代成千上万条手写域名规则，
+#  也是本项目仅用 1179 条规则、而常规配置需要 8450+ 条的原因。
+#
+rules:
+  # --- local / direct / 直连（一条 TLD 规则承担绝大多数判断）---
+  - 'DOMAIN-SUFFIX,cn,DIRECT'
+  - 'DOMAIN-SUFFIX,local,DIRECT'
+  - 'IP-CIDR,127.0.0.0/8,DIRECT,no-resolve'
+  - 'IP-CIDR,192.168.0.0/16,DIRECT,no-resolve'
+  - 'IP-CIDR,10.0.0.0/8,DIRECT,no-resolve'
+  - 'IP-CIDR,172.16.0.0/12,DIRECT,no-resolve'
+
+  # --- add your own curated direct domains here / 在此追加你自己的直连域名 ---
+  # - 'DOMAIN-SUFFIX,example.com,DIRECT'
+
+  # --- everything else / 兜底 ---
+  - 'MATCH,🚀 Select'

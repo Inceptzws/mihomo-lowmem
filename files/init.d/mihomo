@@ -1,0 +1,42 @@
+#!/bin/sh /etc/rc.common
+#
+# mihomo-lowmem :: procd service definition
+# 标准 OpenWrt 服务定义（崩溃自动重启，不依赖登录会话）
+#
+# Using procd instead of nohup/& is essential:
+#   - children of an SSH session receive SIGHUP when the session ends
+#   - procd supervises the process and respawns it on crash
+# 必须用 procd 而不是 nohup/&：
+#   - SSH 会话结束时子进程会收到 SIGHUP 被杀
+#   - procd 会托管进程并在崩溃后自动拉起
+#
+USE_PROCD=1
+START=99
+STOP=10
+
+start_service() {
+	mkdir -p /tmp/mihomo/providers /tmp/mihomo/ui
+
+	# Decompress on demand (first boot, or if /tmp was cleared)
+	# 按需解压（首次启动或 /tmp 被清空时）
+	if [ ! -x /tmp/CrashCore ]; then
+		xz -d -c /overlay/mihomo/CrashCore.xz > /tmp/CrashCore 2>/dev/null
+		chmod 755 /tmp/CrashCore
+	fi
+
+	cp -f /overlay/mihomo/config.yaml /tmp/mihomo/config.yaml 2>/dev/null
+	cp -rf /overlay/mihomo/ui/. /tmp/mihomo/ui/ 2>/dev/null
+
+	procd_open_instance
+	procd_set_param command /tmp/CrashCore -d /tmp/mihomo
+	# Memory guards / 内存保护
+	procd_set_param env GOGC=50 GOMEMLIMIT=20MiB
+	# Respawn on crash: threshold(3600s) retries(5) timeout(5s)
+	procd_set_param respawn 3600 5 5
+	procd_set_param stdout 1
+	procd_set_param stderr 1
+	procd_close_instance
+
+	# Firewall rules after the service is up / 服务起来后再加载防火墙规则
+	( sleep 12; nft list table ip mihomo >/dev/null 2>&1 || nft -f /overlay/mihomo/nft.rules ) &
+}

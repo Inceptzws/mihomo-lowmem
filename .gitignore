@@ -1,0 +1,23 @@
+# build artifacts / 编译产物
+mihomo/
+mihomo-new
+CrashCore
+CrashCore.xz
+*.bin
+
+# local config with real credentials / 含真实凭据的本地配置
+config.yaml
+!files/config.template.yaml
+head.txt
+tail.txt
+
+# credentials / 凭据
+*.key
+*.pub
+.env
+
+# editor / 编辑器
+.DS_Store
+*.swp
+.idea/
+.vscode/

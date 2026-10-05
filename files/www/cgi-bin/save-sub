@@ -1,0 +1,58 @@
+#!/bin/sh
+#
+# mihomo-lowmem :: subscription receiver  (device-side fetch)
+#
+# 核心设计 / Core design:
+#   The ROUTER NEVER DOWNLOADS THE SUBSCRIPTION.
+#   The device you tap the button on does the download and POSTs the body here.
+#   路由器【永不下载订阅】：由你点击按钮的那台设备下载后 POST 到这里。
+#
+#   Why? / 为什么？
+#     - subscription host is often unreachable directly from the router
+#     - TLS + buffering + parsing costs RAM the router cannot spare
+#     - a phone/laptop has orders of magnitude more memory
+#   - 订阅源通常无法从路由器直连
+#   - TLS 握手 + 缓冲 + 解析会吃掉路由器本就紧张的内存
+#   - 手机/电脑的内存是路由器的几十倍
+#
+#   The body is processed STREAMING (awk), so peak memory is O(1)
+#   regardless of subscription size.
+#   内容以流式处理（awk），无论订阅多大，内存占用恒定为 O(1)。
+#
+echo "Content-Type: application/json"
+echo "Access-Control-Allow-Origin: *"
+echo "Access-Control-Allow-Methods: POST, OPTIONS"
+echo "Access-Control-Allow-Headers: Content-Type"
+echo ""
+[ "$REQUEST_METHOD" = "OPTIONS" ] && exit 0
+
+BASE=/overlay/mihomo
+WORK=/tmp/mihomo
+NEW="$WORK/config.yaml.new"
+
+mkdir -p "$WORK" "$BASE"
+
+# 1) config head (everything before `proxies:`) / 配置头
+cat "$BASE/head.txt" > "$NEW" 2>/dev/null
+
+# 2) stream-extract the proxies section / 流式提取 proxies 段
+echo "proxies:" >> "$NEW"
+awk '/^proxies:/{f=1; next} f && /^[a-zA-Z_-]+:/{f=0} f' >> "$NEW"
+
+N=$(awk '/^proxies:/{f=1;next} f&&/^[a-zA-Z_-]+:/{f=0} f' "$NEW" | grep -c 'name:')
+
+# 3) config tail (proxy-groups + rules) / 配置尾
+cat "$BASE/tail.txt" >> "$NEW"
+
+SIZE=$(wc -c < "$NEW" 2>/dev/null || echo 0)
+
+# 4) sanity check: refuse to install a broken config / 校验：坏配置直接拒绝
+if [ "${N:-0}" -lt 3 ]; then
+    rm -f "$NEW"
+    echo "{\"ok\":false,\"error\":\"only ${N:-0} proxies extracted, aborted\"}"
+    exit 0
+fi
+
+cp -f "$NEW" "$BASE/config.yaml"
+( sleep 1; sh /overlay/mihomo/restart.sh ) &
+echo "{\"ok\":true,\"nodes\":${N},\"size\":${SIZE},\"message\":\"${N} proxies applied\"}"

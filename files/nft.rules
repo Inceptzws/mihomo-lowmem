@@ -1,0 +1,35 @@
+#!/usr/sbin/nft -f
+#
+# mihomo-lowmem :: transparent proxy rules (nftables)
+# 透明代理规则（nftables）
+#
+# Why nftables instead of iptables?
+#   1. Modern OpenWrt (21.02+) uses nftables natively - no compat layer, less RAM
+#   2. Single table, atomic load, fewer rules
+# 为什么用 nftables 而不是 iptables：
+#   1. OpenWrt 21.02+ 原生使用 nftables，无需兼容层，更省内存
+#   2. 单表原子加载，规则更少
+#
+# Traffic flow / 流量路径:
+#   LAN client -> prerouting -> TCP redirected to 7892 (redir-port)
+#                             -> DNS/53 redirected to 1053 (mihomo DNS)
+#
+table ip mihomo {
+    chain prerouting {
+        type nat hook prerouting priority dstnat; policy accept;
+
+        # 1) Never touch private / reserved ranges (LAN traffic stays local)
+        #    私有网段直接放行（局域网互访不受影响）
+        ip daddr { 0.0.0.0/8, 10.0.0.0/8, 127.0.0.0/8, 169.254.0.0/16,
+                   172.16.0.0/12, 192.168.0.0/16, 224.0.0.0/4, 240.0.0.0/4 } return
+
+        # 2) Transparent TCP proxy for LAN clients
+        #    LAN 客户端 TCP 流量透明重定向
+        iifname "br-lan" meta l4proto tcp redirect to :7892
+
+        # 3) Force DNS through mihomo so rules see real domains
+        #    强制 DNS 走 mihomo，保证分流规则能看到真实域名
+        iifname "br-lan" meta l4proto udp udp dport 53 redirect to :1053
+        iifname "br-lan" meta l4proto tcp tcp dport 53 redirect to :1053
+    }
+}

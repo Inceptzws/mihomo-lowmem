@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
+<meta http-equiv="Cache-Control" content="no-cache,no-store,must-revalidate">
+<title>代理管理 · 小米4A</title>
+<style>
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{margin:0;padding:16px;background:#0f1115;color:#e8eaed;
+       font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;
+       font-size:15px;line-height:1.5;padding-bottom:40px}
+  h1{font-size:19px;margin:0 0 4px;font-weight:600}
+  .sub{color:#8b93a7;font-size:13px;margin-bottom:16px}
+  .card{background:#191c23;border-radius:12px;padding:14px;margin-bottom:14px}
+  .label{font-size:13px;color:#8b93a7;margin-bottom:10px;letter-spacing:.5px}
+  .row{display:flex;align-items:center;justify-content:space-between;
+       padding:11px 12px;background:#222630;border-radius:9px;margin-bottom:8px;
+       font-size:14px;cursor:pointer;transition:background .15s}
+  .row:active{background:#2c3140}
+  .row.on{background:#1e3a5f;border-left:3px solid #4a9eff}
+  .row .nm{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-right:8px}
+  .badge{font-size:11px;padding:3px 8px;border-radius:20px;background:#2c3140;color:#8b93a7;flex-shrink:0}
+  button{width:100%;padding:13px;border:0;border-radius:9px;background:#2b6cb0;color:#fff;
+         font-size:15px;font-weight:500;cursor:pointer;margin-top:6px;font-family:inherit}
+  button:active{opacity:.85}
+  button:disabled{opacity:.5;cursor:default}
+  button.gray{background:#2c3140;color:#c8ced9}
+  .hint{font-size:12px;color:#6b7280;margin-top:8px;line-height:1.6}
+  .ok{color:#4ade80}.err{color:#f87171}.warn{color:#fbbf24}
+  a{color:#4a9eff;text-decoration:none}
+  input{width:100%;padding:11px;border-radius:9px;border:1px solid #2c3140;background:#222630;
+        color:#e8eaed;font-size:14px;margin-bottom:8px;font-family:inherit}
+</style>
+</head>
+<body>
+<h1>代理管理</h1>
+<div class="sub">小米路由器 4A · OpenWrt · mihomo</div>
+
+<!-- 节点切换 -->
+<div class="card">
+  <div class="label">🚀 当前节点</div>
+  <div class="row" id="cur" style="background:#1e3a5f;border-left:3px solid #4a9eff">
+    <span class="nm">加载中…</span><span class="badge">当前</span>
+  </div>
+  <button class="gray" id="speed">📊 测延迟并排序（Google 目标 ✓）</button>
+  <button class="gray" id="real" style="margin-top:6px">🚀 真实下载测速（前 5 个节点）</button>
+  <div class="hint" id="speedr"></div>
+  <div id="list" style="margin-top:10px;max-height:320px;overflow-y:auto"></div>
+</div>
+
+<!-- 分组 -->
+<div class="card">
+  <div class="label">📂 策略组</div>
+  <div id="groups"></div>
+</div>
+
+<!-- 更新订阅 -->
+<div class="card">
+  <div class="label">📥 更新订阅</div>
+  <div class="hint" style="margin-top:0;margin-bottom:10px">
+    点击后由 <b>你当前使用的这台设备</b>（手机/平板/电脑）去拉取订阅 ✓<br>
+    路由器的内存很小，不参与拉取 ✓ 只负责接收和应用 ✓
+  </div>
+  <button id="upd">🔄 更新订阅（用本设备拉取）</button>
+  <div class="hint" id="updr"></div>
+</div>
+
+<!-- 路由器 -->
+<div class="card">
+  <div class="label">⚙️ 路由器</div>
+  <div class="row" onclick="location.href='http://192.168.1.1/'">
+    <span class="nm">OpenWrt 管理面板（WiFi/网络）</span><span class="badge">→</span>
+  </div>
+  <div class="hint">WiFi：你的 WiFi 名称 ｜ 你的 WiFi 密码</div>
+</div>
+
+<div class="hint" style="text-align:center;margin-top:20px" id="ver"></div>
+
+<script>
+const API = location.protocol + "//" + location.hostname + ":9990";
+const CGI = "http://" + location.hostname + "/cgi-bin/save-sub";
+const SUB = "<SUBSCRIPTION_URL>";   // ← 改成你的订阅地址 / put your subscription URL here;
+const $ = id => document.getElementById(id);
+
+async function api(path, opt) {
+  const r = await fetch(API + path, opt);
+  return r.json();
+}
+
+/* ===== 加载节点 ===== */
+async function load() {
+  try {
+    const d = await api("/proxies");
+    const g = d.proxies["🚀节点选择"];
+    if (!g) { $("cur").querySelector(".nm").textContent = "未找到节点组"; return; }
+    $("cur").querySelector(".nm").textContent = g.now || "-";
+    const box = $("list");
+    box.innerHTML = "";
+    (g.all || []).forEach(n => {
+      const div = document.createElement("div");
+      div.className = "row" + (n === g.now ? " on" : "");
+      div.innerHTML = '<span class="nm">' + n + '</span><span class="badge">切换</span>';
+      div.onclick = async () => {
+        await api("/proxies/" + encodeURIComponent("🚀节点选择"),
+                  {method:"PUT", headers:{"Content-Type":"application/json"},
+                   body: JSON.stringify({name:n})});
+        try { await api("/proxies/" + encodeURIComponent("🎬媒体解锁"),
+                  {method:"PUT", headers:{"Content-Type":"application/json"},
+                   body: JSON.stringify({name:n})}); } catch(e){}
+        load();
+      };
+      box.appendChild(div);
+    });
+    // 策略组
+    const gs = $("groups"); gs.innerHTML = "";
+    for (const [name, v] of Object.entries(d.proxies)) {
+      if (v.type && ["Selector","URLTest","Fallback","LoadBalance"].includes(v.type) && name !== "🚀节点选择") {
+        const div = document.createElement("div");
+        div.className = "row";
+        div.innerHTML = '<span class="nm">' + name + '</span><span class="badge">' + (v.now || "") + '</span>';
+        gs.appendChild(div);
+      }
+    }
+    const m = await api("/version");
+    $("ver").textContent = "内核 " + (m.version || "?");
+  } catch(e) {
+    $("cur").querySelector(".nm").textContent = "读取失败：" + e.message;
+  }
+}
+
+/* ===== 测速并排序 ===== */
+$("speed").onclick = async () => {
+  const b = $("speed"); b.disabled = true;
+  const d = await api("/proxies");
+  const all = d.proxies["🚀节点选择"].all || [];
+  $("speedr").textContent = "测速中（0/" + all.length + "）…";
+  const res = [];
+  let done = 0;
+  const worker = async (n) => {
+    try {
+      const r = await api("/proxies/" + encodeURIComponent(n) +
+        "/delay?timeout=5000&url=http://www.gstatic.com/generate_204");
+      if (r.delay) res.push({n, d:r.delay});
+    } catch(e){}
+    done++; $("speedr").textContent = "测速中（" + done + "/" + all.length + "）…";
+  };
+  for (let i = 0; i < all.length; i += 4) {
+    await Promise.all(all.slice(i, i+4).map(worker));
+  }
+  res.sort((a,b) => a.d - b.d);
+  $("speedr").innerHTML = res.length
+    ? '<span class="ok">✅ 可用 ' + res.length + ' 个</span> ｜ 最快：' +
+      res.slice(0,3).map(x => x.n + '(' + x.d + 'ms)').join('、')
+    : '<span class="err">全部超时</span>';
+  b.disabled = false;
+};
+
+/* ===== 更新订阅：用【当前设备】拉取 ✓ ===== */
+$("upd").onclick = async () => {
+  const b = $("upd"), r = $("updr");
+  b.disabled = true;
+  try {
+    r.innerHTML = '<span class="warn">① 正在用本设备拉取订阅…</span>';
+    const resp = await fetch(SUB, {cache:"no-store"});
+    if (!resp.ok) throw new Error("HTTP " + resp.status);
+    const text = await resp.text();
+    r.innerHTML = '<span class="warn">② 拉取成功 ' + text.length + ' 字节，正在交给路由器…</span>';
+    const up = await fetch(CGI, {method:"POST", body:text});
+    const j = await up.json();
+    if (j.ok) {
+      r.innerHTML = '<span class="ok">✅ 已更新（' + j.size + ' 字节）✓ 新节点正在应用（约 10 秒）</span>';
+      setTimeout(load, 12000);
+    } else {
+      r.innerHTML = '<span class="err">❌ ' + (j.error || "失败") + '</span>';
+    }
+  } catch(e) {
+    r.innerHTML = '<span class="err">❌ 失败：' + e.message + '<br>（请确认本设备已连上 YourWiFi 的 WiFi）</span>';
+  }
+  b.disabled = false;
+};
+
+/* ===== 真实下载测速（切换节点+本设备下载 ✓ 走中国网络 ✓）===== */
+$("real").onclick = async () => {
+  const b = $("real"), out = $("speedr");
+  b.disabled = true;
+  out.innerHTML = '<span class="warn">先测延迟找最快的 5 个…</span>';
+  const d = await api("/proxies");
+  const all = d.proxies["🚀节点选择"].all || [];
+  const cand = [];
+  for (let i = 0; i < all.length; i += 6) {
+    await Promise.all(all.slice(i, i+6).map(async n => {
+      try {
+        const r = await api("/proxies/" + encodeURIComponent(n) +
+          "/delay?timeout=4000&url=http://www.gstatic.com/generate_204");
+        if (r.delay) cand.push({n, d:r.delay});
+      } catch(e){}
+    }));
+  }
+  cand.sort((a,b)=>a.d-b.d);
+  const top = cand.slice(0,5);
+  if (!top.length) { out.innerHTML = '<span class="err">没有可用节点</span>'; b.disabled=false; return; }
+  out.innerHTML = '<span class="warn">正在下载测速（' + top.length + ' 个节点，每个约 5 秒）…</span>';
+  const res = [];
+  for (const it of top) {
+    await api("/proxies/" + encodeURIComponent("🚀节点选择"),
+      {method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({name:it.n})});
+    try { await api("/proxies/" + encodeURIComponent("🎬媒体解锁"),
+      {method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({name:it.n})}); } catch(e){}
+    await new Promise(r=>setTimeout(r, 1200));
+    // 用【本设备】下载 3MB（流量自动经路由器 → 当前节点 ✓ 真实速度 ✓）
+    let mbps = 0;
+    try {
+      const t0 = performance.now();
+      const rr = await fetch("https://speed.cloudflare.com/__down?bytes=3000000&r=" + Math.random(), {cache:"no-store"});
+      const blob = await rr.blob();
+      const dt = (performance.now() - t0) / 1000;
+      mbps = (blob.size * 8) / dt / 1000000;
+    } catch(e) { mbps = 0; }
+    res.push({...it, mbps});
+    out.innerHTML = '<span class="warn">测速中（' + res.length + '/' + top.length + '）… ' +
+      it.n + ' → ' + mbps.toFixed(1) + ' Mbps</span>';
+  }
+  res.sort((a,b)=>b.mbps-a.mbps);
+  const best = res.find(x=>x.mbps>0) || res[0];
+  if (best) {
+    await api("/proxies/" + encodeURIComponent("🚀节点选择"),
+      {method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({name:best.n})});
+  }
+  out.innerHTML = '✅ 实测速度（按快慢排序，已切到最快）：<br>' +
+    res.map(x=>'&nbsp;&nbsp;' + x.mbps.toFixed(1) + ' Mbps ｜ ' + x.d + 'ms ｜ ' + x.n).join('<br>');
+  b.disabled = false;
+  load();
+};
+
+load();
+setInterval(load, 30000);
+</script>
+</body>
+</html>
