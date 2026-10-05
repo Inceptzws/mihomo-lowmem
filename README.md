@@ -136,6 +136,28 @@ OpenWrt) should work with the same recipe after changing:
 > 都可以套用同一套流程，只需改动三处：镜像名里的 target/profile、
 > 编译脚本里的 `GOARCH`/`GOMIPS`、以及刷写命令里的 `mtd` 分区名。
 
+
+### Install from the OpenWrt feed / 从 OpenWrt feed 安装
+
+The package is also published as a [buildroot feed](https://github.com/Inceptzws/openwrt-mihomo-lowmem-feed):
+
+```sh
+cd openwrt
+echo "src-git mihomolowmem https://github.com/Inceptzws/openwrt-mihomo-lowmem-feed.git" >> feeds.conf.default
+./scripts/feeds update mihomolowmem
+./scripts/feeds install -a -p mihomolowmem
+make menuconfig      # Network -> Web Servers/Proxies -> mihomo-lowmem
+                     # LuCI    -> Applications        -> luci-app-mihomo-lowmem
+make package/mihomo-lowmem/compile V=s
+```
+
+**Prefer binaries?** Grab a prebuilt core from
+[Releases](https://github.com/Inceptzws/mihomo-lowmem/releases) —
+`mihomo-v1.18.0-linux-mipsle-softfloat.xz` is the one for MT7621A routers.
+
+**想要现成二进制？** 直接从 [Releases](https://github.com/Inceptzws/mihomo-lowmem/releases)
+下载即可 —— MT7621A 路由器用 `mihomo-v1.18.0-linux-mipsle-softfloat.xz`。
+
 ### Compatibility
 
 | Item | Value |
@@ -282,6 +304,25 @@ mtd8  OS1         ~13 MB      mtd9  rootfs       mtd10 disk  1.5 MB
 **同类机型**：MT7621A、≥128MB 内存、≥16MB 闪存、支持 nftables 的 OpenWrt 设备
 都可套用同一流程，只需改三处（镜像名里的 target/profile、编译脚本里的
 `GOARCH`/`GOMIPS`、刷写命令里的 `mtd` 分区名）。
+
+
+### 从 OpenWrt feed 安装
+
+本包同时发布为 [buildroot feed](https://github.com/Inceptzws/openwrt-mihomo-lowmem-feed)：
+
+```sh
+cd openwrt
+echo "src-git mihomolowmem https://github.com/Inceptzws/openwrt-mihomo-lowmem-feed.git" >> feeds.conf.default
+./scripts/feeds update mihomolowmem
+./scripts/feeds install -a -p mihomolowmem
+make menuconfig      # 网络 -> Web Servers/Proxies -> mihomo-lowmem
+                     # LuCI -> 应用程序 -> luci-app-mihomo-lowmem
+make package/mihomo-lowmem/compile V=s
+```
+
+**想要现成二进制？** 直接从
+[Releases](https://github.com/Inceptzws/mihomo-lowmem/releases) 下载 ——
+MT7621A 路由器用 `mihomo-v1.18.0-linux-mipsle-softfloat.xz`。
 
 ### 兼容性
 

@@ -94,7 +94,12 @@ Then open a PR against `openwrt/packages`. In the PR body, include:
 | Likely feedback | "why not just tune the default package at runtime?" — answer with the build-tag and heap measurements |
 | Alternative | keep it as a **third-party feed** — fully acceptable, no review needed |
 
-### D. Running it as your own feed (fastest path)
+### D. Running it as your own feed (fastest path) — ✅ already published
+### D. 做成自己的 feed（最快路径）—— ✅ 已完成
+
+**Status: published at <https://github.com/Inceptzws/openwrt-mihomo-lowmem-feed> ✓**
+
+**状态：已发布 ✓** <https://github.com/Inceptzws/openwrt-mihomo-lowmem-feed>
 
 If you do not want to wait for upstream, publish a feed:
 
